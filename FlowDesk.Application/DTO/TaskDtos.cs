@@ -40,4 +40,5 @@ namespace FlowDesk.Application.DTO
         DateTime CreatedAt,
         DateTime UpdatedAt
     );
+    public record StatusTransitionDto(string NewStatus);
 }
