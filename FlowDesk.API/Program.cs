@@ -1,3 +1,4 @@
+using FlowDesk.API.Middleware;
 using FlowDesk.Application.Interfaces;
 using FlowDesk.Infrastructure.Data;
 using FlowDesk.Infrastructure.Services;
@@ -34,10 +35,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
+//  Swagger always enabled
 builder.Services.AddSwaggerGen(c =>
 {
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -66,29 +67,34 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
 var app = builder.Build();
 
-// Swagger only in Development
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-//app.UseHttpsRedirection();
-app.MapControllers();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Auto create and migrate database on startup
+//  Auto migrate database on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
 
-//app.Run();
+// Global error handler
+app.UseMiddleware<ExceptionMiddleware>();
+
+// Always show Swagger (not just in Development)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "FlowDesk API v1");
+    c.RoutePrefix = "swagger";
+});
+
+// Redirect root to swagger
+app.MapGet("/", () => Results.Redirect("/swagger"));
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+//  Use PORT from environment (required for Render)
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");
