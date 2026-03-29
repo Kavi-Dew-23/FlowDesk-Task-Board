@@ -69,14 +69,25 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Swagger only in Development
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 //app.UseHttpsRedirection();
 app.MapControllers();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Auto create and migrate database on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 //app.Run();
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
